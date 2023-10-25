@@ -247,8 +247,8 @@ def make_records_og(typ, param="bonds"):
 #     return Records.filter_records(f"{DIR}/{param}{suff}.json",f"{DIR}/{param}{suff}_filter{pattern}.json",pattern)
 
 TITLE = "Espaloma"
-DIR = "data/industry"
-DIR_OG = 'data_og/industry'
+DIR_OG = "data/industry"
+DIR = 'data_r3/industry'
 TYPE = "k"
 RECORDS = make_records(TYPE)
 RECORDS_OG = make_records_og(TYPE)

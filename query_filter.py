@@ -2,18 +2,16 @@
 
 import json
 import os
+import re
 import sys
 import warnings
 from collections import defaultdict
 from dataclasses import asdict, dataclass
 from typing import List
-import numpy as np
 
 import click
 from openff.toolkit import ForceField, Molecule
 from tqdm import tqdm
-from openff.qcsubmit.results.filters import SMARTSFilter
-from rdkit import Chem
 
 warnings.filterwarnings("ignore")
 
@@ -94,7 +92,7 @@ class Torsions:
                 i, j, k, m = key
                 sage[(i, j, k, m, per)] = (
                     val.magnitude,
-                    v.smirks,
+                    f"{v.smirks}-{fc}",  # tag the smirks with the fc
                 )
 
     def fix_keys(espaloma, sage):
@@ -143,6 +141,9 @@ class Record:
 
 
 class Records(defaultdict):
+    """Records is a defaultdict of smirks->Record with additional methods for
+    converting to and from JSON"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(Record, *args, **kwargs)
 
@@ -156,33 +157,9 @@ class Records(defaultdict):
         ret = Records()
         with open(filename, "r") as inp:
             d = json.load(inp)
-            i = 0
             for k, v in d.items():
                 ret[k] = Record(**v)
-                # ret[k] = Record(**v_new)
             return ret
-
-    # def filter_records(fromfile,tofile,pattern='[*;r3]'):
-        # new_dict = Records()
-        # with open(fromfile, "r") as inp:
-        #     d = json.load(inp)
-        #     i = 0
-        #     for smirk,v in d.items():
-        #         i += 1
-        #         if i > 5:
-        #             break
-        #         # print(v)
-        #         # v = dict(v)
-        #         # v = self.items()[smirk]
-        #         # print(v)
-        #         molecules = v['molecules']
-        #         molecules_ring_smring = [len(Molecule().from_smiles(mol,allow_undefined_stereo=True).chemical_environment_matches(pattern)) for mol in molecules]
-        #         smring_idx = np.argwhere(np.array(molecules_ring_smring) != 0)
-        #         v_new = {'molecules':list(np.array(molecules)[smring_idx]),'espaloma_values': list(np.array(v['espaloma_values'])[smring_idx]),'sage_value':v['sage_value'],'ident':v['ident'],'envs':list(np.array(v['envs'])[smring_idx])}
-        #         new_dict[smirk] = Record(**v_new)
-        # new_dict.to_json(tofile)
-        # return new_dict
-
 
 
 class Driver:
@@ -201,6 +178,7 @@ class Driver:
             ),
             Molecule.to_inchikey,
         )
+
         # IF USING FILTER
         self.molecules = [mol for mol in self.molecules if len(mol.chemical_environment_matches('[*;r3]')) != 0]
         # cutoff for considering espaloma's result to be different from ours
@@ -244,7 +222,6 @@ class Driver:
                     mol.to_topology()
                 )[0]
 
-
             # IF FILTERING
             # if m == 0: print(mol.chemical_environment_matches('[C:1]'))
             atoms_of_interest = [idx[0] for idx in mol.chemical_environment_matches('[*;r3:1]')]
@@ -252,9 +229,8 @@ class Driver:
             labels = self.sage_labels[m][cls.sage_label]
             sage = {}
             ids = {}  # map of smirks to id
-            if m == 0: print(list(labels.items()))
             for k, v in labels.items():
-                if k[0] in atoms_of_interest or k[1] in atoms_of_interest: # FILTERING
+                if k[0] in atoms_of_interest or k[1] in atoms_of_interest:
                     ids[v.smirks] = v.id
                     cls.insert_sage(sage, k, v)
 
@@ -278,6 +254,9 @@ class Driver:
                 self.print_header(cls)
 
             for k, (v, smirks) in sage.items():
+                # smirks is actually a tagged smirks for torsions to separate
+                # the k values
+                id_key = re.sub(r"-k[123]$", "", smirks)
                 diff = abs(v - espaloma[k])
                 if diff > self.eps:
                     if self.verbose:
@@ -288,7 +267,7 @@ class Driver:
                     # trim periodicity off of torsions, others should be fine
                     ret[smirks].envs.append(list(k)[:4])
                     ret[smirks].sage_value = v
-                    ret[smirks].ident = ids[smirks]
+                    ret[smirks].ident = ids[id_key]
 
         return ret
 
