@@ -13,6 +13,8 @@ import click
 from openff.toolkit import ForceField, Molecule
 from tqdm import tqdm
 
+import sys
+
 warnings.filterwarnings("ignore")
 
 # suppress numpy warnings
@@ -104,7 +106,7 @@ class Torsions:
 
     # this is where to fix torsions
     def fix_keys(espaloma, sage):
-        print(espaloma)
+        # print(espaloma)
         return {k: v for k, v in espaloma.items() if k in sage}
 
 
@@ -176,8 +178,10 @@ class Driver:
         self,
         forcefield: str,
         dataset: str,
+        filter_pattern: str,
         eps: float = 10.0,
         verbose: bool = False,
+
     ):
         self.forcefield = ForceField(forcefield)
         self.molecules = deduplicate_by(
@@ -187,9 +191,10 @@ class Driver:
             ),
             Molecule.to_inchikey,
         )
+        self.filter_pattern = filter_pattern
 
         # IF USING FILTER
-        self.molecules = [mol for mol in self.molecules if len(mol.chemical_environment_matches('[*;r4]')) != 0]
+        self.molecules = [mol for mol in self.molecules if len(mol.chemical_environment_matches('[{}]'.format(self.filter_pattern))) != 0]
         # cutoff for considering espaloma's result to be different from ours
         self.eps = eps
         self.verbose = verbose
@@ -233,7 +238,7 @@ class Driver:
 
             # IF FILTERING
             # if m == 0: print(mol.chemical_environment_matches('[C:1]'))
-            atoms_of_interest = [idx[0] for idx in mol.chemical_environment_matches('[*;r4:1]')]
+            atoms_of_interest = [idx[0] for idx in mol.chemical_environment_matches('[{}:1]'.format(self.filter_pattern))]
 
             labels = self.sage_labels[m][cls.sage_label]
             sage = {}
@@ -322,7 +327,8 @@ def print_summary(records: Records, outfile=None):
 @click.option("--force-constants", "-f", is_flag=True, default=True)
 @click.option("--dataset", "-d", default="datasets/filtered-opt.json")
 @click.option("--out-dir", "-o", default="data")
-def main(force_constants, dataset, out_dir):
+@click.option("--filter_pattern",'-p',default='*;r3')
+def main(force_constants, dataset, out_dir,filter_pattern):
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
@@ -346,6 +352,7 @@ def main(force_constants, dataset, out_dir):
     driver = Driver(
         forcefield="openff-2.1.0.offxml",
         dataset=dataset,
+        filter_pattern=filter_pattern,
         eps=eps,
         verbose=False,
     )
@@ -358,4 +365,5 @@ def main(force_constants, dataset, out_dir):
 
 
 if __name__ == "__main__":
+    # FILTER_PATTERN = sys.argv[1]
     main()

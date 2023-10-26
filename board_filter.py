@@ -255,7 +255,7 @@ def make_records_og(typ, param="bonds"):
 #
 #     return Records.filter_records(f"{DIR}/{param}{suff}.json",f"{DIR}/{param}{suff}_filter{pattern}.json",pattern)
 
-DIR_TO_USE='data_r4'
+DIR_TO_USE=sys.argv[1]
 OG_DIR_TO_USE='data'
 
 TITLE = "Espaloma"

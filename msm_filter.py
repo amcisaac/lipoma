@@ -5,7 +5,7 @@ import faulthandler
 import logging
 import os
 from collections import defaultdict
-
+import sys
 import click
 import numpy as np
 from openff.qcsubmit.results import OptimizationResultCollection
@@ -70,6 +70,7 @@ def calculate_parameters(
     qc_record: ResultRecord,
     molecule: Molecule,
     forcefield: ForceField,
+    filter_pattern: str
 ):
     """Calculate the modified seminario parameters for the given input
     molecule and store them by OFF SMIRKS. `records` is an out param for
@@ -92,7 +93,7 @@ def calculate_parameters(
     kcal_per_mol_per_rad = unit.kilocalorie_per_mole / unit.radian**2
 
     smiles = molecule.to_smiles(mapped=True)
-    atoms_of_interest = [idx[0] for idx in molecule.chemical_environment_matches('[*;r4:1]')]
+    atoms_of_interest = [idx[0] for idx in molecule.chemical_environment_matches('[{}:1]'.format(filter_pattern ))]
 
     # print(labels["Bonds"].items())
     for bond, p in labels["Bonds"].items():
@@ -157,7 +158,7 @@ def summary(records):
 
 
 class MSM:
-    def __init__(self, dataset):
+    def __init__(self, dataset,filter_pattern):
         self.timer = Timer()
         dataset = OptimizationResultCollection.parse_file(dataset)
         dataset = dataset.filter(SMARTSFilter(smarts_to_include=['[*;r4]']))
@@ -176,6 +177,7 @@ class MSM:
         print(f"Found {hessian_set.n_molecules} hessian molecules")
 
         self.records_and_molecules = hessian_set.to_records()
+        self.filter_pattern = filter_pattern
 
     def compute_msm(self, forcefield):
         if isinstance(forcefield, ForceField):
@@ -189,7 +191,7 @@ class MSM:
             self.records_and_molecules, desc="Computing msm"
         ):
             try:
-                calculate_parameters(records, record, molecule, ff)
+                calculate_parameters(records, record, molecule, ff,self.filter_pattern)
             except (KeyError, StereoChemistryError):
                 errors += 1
 
@@ -199,7 +201,7 @@ class MSM:
 
     def score(self, forcefield):
         "Print a distance summary for `forcefield`"
-        records = self.compute_msm(forcefield)
+        records = self.compute_msm(forcefield,self.filter_pattern)
         summary(records)
 
     def update_forcefield(self, forcefield) -> ForceField:
@@ -238,12 +240,13 @@ class MSM:
 @click.option("--forcefield", "-f", default="openff-2.1.0.offxml")
 @click.option("--dataset", "-d", default="datasets/filtered-opt.json")
 @click.option("--out-dir", "-o", default="data")
-def main(forcefield, dataset, out_dir):
+@click.option("--filter_pattern","-p",default='*;r3')
+def main(forcefield, dataset, out_dir,filter_pattern):
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
 
-    msm = MSM(dataset)
+    msm = MSM(dataset,filter_pattern)
 
     records = msm.compute_msm(forcefield)
 
@@ -255,4 +258,5 @@ if __name__ == "__main__":
     logging.getLogger("openff").setLevel(logging.ERROR)
     with open("fault_handler.log", "w") as fobj:
         faulthandler.enable(fobj)
+        # FILTER_PATTERN = sys.argv[1]
         main()
