@@ -1,0 +1,41 @@
+data_dir = data_r4
+query_flags =
+
+ifdef PLOT
+    query_flags += -p
+endif
+
+parse_query = \
+    python parse_query.py -i $(data_dir)/industry/$1_dedup.dat \
+			  -o output/$1/industry \
+		          $(query_flags)
+
+all: msm industry industry-eq
+
+parse:
+	$(call parse_query,bonds)
+	$(call parse_query,angles)
+	$(call parse_query,torsions)
+
+# industry force constants
+json := $(addprefix $(data_dir)/industry/,bonds_dedup.json angles_dedup.json	\
+				   torsions_dedup.json impropers_dedup.json)
+$(json): query_filter.py
+	python query_filter.py --dataset datasets/industry.json \
+			--out-dir $(data_dir)/industry
+industry: $(json)
+
+# industry equilibrium values
+eq := $(addprefix $(data_dir)/industry/,bonds_eq.json angles_eq.json)
+$(eq): query_filter.py
+	python query_filter.py --dataset datasets/industry.json \
+			--out-dir $(data_dir)/industry --force-constants
+
+industry-eq: $(eq)
+
+msm := $(addprefix $(data_dir)/msm/,angles_dedup.json angles_eq.json bonds_dedup.json	\
+			     bonds_eq.json)
+$(msm): msm_filter.py
+	python msm_filter.py -o $(data_dir)/msm
+
+msm: $(msm)
