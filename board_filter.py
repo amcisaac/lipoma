@@ -1,7 +1,8 @@
 import base64
 import re
 import warnings
-
+import sys
+# numpy.seterr(all='warn')
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
 
@@ -13,6 +14,7 @@ with warnings.catch_warnings():
 
     from query import Records
 
+# np.seterr(all='warn')
 
 def make_fig(smirk, record, title, record_og):
     fig = px.histogram(
@@ -35,13 +37,18 @@ def make_fig(smirk, record, title, record_og):
 
     )
 
+    # print(np.average(record_og.espaloma_values))
+    # print(np.isnan(np.average(record_og.espaloma_values)))
     # If FILTERING
-    fig.add_vline(
-        x=np.average(record_og.espaloma_values),
-        annotation_text=f"{title} Bulk Avg.",
-        line_dash="dash",
-        line_color="red"
-    )
+    if not np.isnan(np.average(record_og.espaloma_values)):
+        fig.add_vline(
+            x=np.average(record_og.espaloma_values),
+            annotation_text=f"{title} Bulk Avg.",
+            line_dash="dash",
+            line_color="red"
+        )
+    # except RuntimeWarning:
+    #     pass
 
     fig.update_traces(marker_line_width=1, name=title)
     return dcc.Graph(figure=fig, id="graph")
@@ -161,14 +168,16 @@ def choose_constant(value):
     prevent_initial_call=True,
 )
 def choose_data(value):
-    global RECORDS, SMIRKS, CUR_SMIRK, TYPE, DIR, TITLE, RECORDS_OG
+    global RECORDS, SMIRKS, CUR_SMIRK, TYPE, DIR, TITLE, RECORDS_OG, OG_DIR_TO_USE, DIR_OG, DIR_TO_USE
     match value:
         case "esp":
             TITLE = "Espaloma"
-            DIR = "data/industry"
+            DIR = DIR_TO_USE + "/industry"
+            DIR_OG = OG_DIR_TO_USE + '/industry'
         case "msm":
             TITLE = "MSM"
-            DIR = "data/msm"
+            DIR = DIR_TO_USE+"/msm"
+            DIR_OG = OG_DIR_TO_USE + '/msm'
         case e:
             raise ValueError(e)
 
@@ -246,9 +255,12 @@ def make_records_og(typ, param="bonds"):
 #
 #     return Records.filter_records(f"{DIR}/{param}{suff}.json",f"{DIR}/{param}{suff}_filter{pattern}.json",pattern)
 
+DIR_TO_USE='data_r4'
+OG_DIR_TO_USE='data'
+
 TITLE = "Espaloma"
 DIR_OG = "data/industry"
-DIR = 'data_r3/industry'
+DIR = DIR_TO_USE + '/industry'
 TYPE = "k"
 RECORDS = make_records(TYPE)
 RECORDS_OG = make_records_og(TYPE)

@@ -85,17 +85,26 @@ class Torsions:
         return (i, j, k, m, per), fc
 
     def insert_sage(sage, key, v):
-        for fc in ["k1", "k2", "k3"]:
+        for y,fc in enumerate(["k1", "k2", "k3","k4",'k5','k6']):
             val = getattr(v, fc, None)
             if val is not None:
                 per = getattr(v, f"periodicity{fc[-1]}")
                 i, j, k, m = key
-                sage[(i, j, k, m, per)] = (
+                sage[(i, j, k, m, y+1)] = (
                     val.magnitude,
                     f"{v.smirks}-{fc}",  # tag the smirks with the fc
                 )
+            else:
+                per = 0 #getattr(v, f"periodicity{fc[-1]}")
+                i, j, k, m = key
+                sage[(i, j, k, m, y+1)] = (
+                    0,
+                    f"{v.smirks}-{fc}",  # tag the smirks with the fc
+                )
 
+    # this is where to fix torsions
     def fix_keys(espaloma, sage):
+        print(espaloma)
         return {k: v for k, v in espaloma.items() if k in sage}
 
 
@@ -180,7 +189,7 @@ class Driver:
         )
 
         # IF USING FILTER
-        self.molecules = [mol for mol in self.molecules if len(mol.chemical_environment_matches('[*;r3]')) != 0]
+        self.molecules = [mol for mol in self.molecules if len(mol.chemical_environment_matches('[*;r4]')) != 0]
         # cutoff for considering espaloma's result to be different from ours
         self.eps = eps
         self.verbose = verbose
@@ -224,7 +233,7 @@ class Driver:
 
             # IF FILTERING
             # if m == 0: print(mol.chemical_environment_matches('[C:1]'))
-            atoms_of_interest = [idx[0] for idx in mol.chemical_environment_matches('[*;r3:1]')]
+            atoms_of_interest = [idx[0] for idx in mol.chemical_environment_matches('[*;r4:1]')]
 
             labels = self.sage_labels[m][cls.sage_label]
             sage = {}
@@ -256,7 +265,7 @@ class Driver:
             for k, (v, smirks) in sage.items():
                 # smirks is actually a tagged smirks for torsions to separate
                 # the k values
-                id_key = re.sub(r"-k[123]$", "", smirks)
+                id_key = re.sub(r"-k[123456]$", "", smirks)
                 diff = abs(v - espaloma[k])
                 if diff > self.eps:
                     if self.verbose:
@@ -322,7 +331,7 @@ def main(force_constants, dataset, out_dir):
             (Bonds, f"{out_dir}/bonds_dedup.dat"),
             (Angles, f"{out_dir}/angles_dedup.dat"),
             (Torsions, f"{out_dir}/torsions_dedup.dat"),
-            (Impropers, f"{out_dir}/impropers_dedup.dat"),
+            # (Impropers, f"{out_dir}/impropers_dedup.dat"),
         ]
         eps = 0.0
     else:
