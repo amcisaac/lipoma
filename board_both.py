@@ -26,6 +26,8 @@ def make_fig(smirk, record, title, record_og):
         series=np.concatenate((["All"]*len(x1),["Filtered"]*len(x0))),
         data  =np.concatenate((x1,x0))
     ))
+    # print(df)
+    # print(title)
     # test.set_index()
     fig = px.histogram(
         df,
@@ -33,9 +35,9 @@ def make_fig(smirk, record, title, record_og):
         color = 'series',
         barmode = 'overlay',
         title=f"{record.ident} {smirk}",
-        # labels=['All','Filtered'],
+        labels='series',
         color_discrete_sequence=['red','blue'],
-        # color=
+        # color=series,
         width=800,
         height=600,
     )
@@ -66,7 +68,7 @@ def make_fig(smirk, record, title, record_og):
     # except RuntimeWarning:
     #     pass
 
-    fig.update_traces(marker_line_width=1, name=title)
+    fig.update_traces(marker_line_width=1)#, name=title)
     return dcc.Graph(figure=fig, id="graph")
 
 
