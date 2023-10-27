@@ -161,7 +161,7 @@ class MSM:
     def __init__(self, dataset,filter_pattern):
         self.timer = Timer()
         dataset = OptimizationResultCollection.parse_file(dataset)
-        dataset = dataset.filter(SMARTSFilter(smarts_to_include=['[*;r4]']))
+        dataset = dataset.filter(SMARTSFilter(smarts_to_include=['[{}]'.format(filter_pattern)]))
 
         self.timer.say("finished loading dataset")
 

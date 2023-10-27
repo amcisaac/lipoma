@@ -18,11 +18,24 @@ with warnings.catch_warnings():
 # np.seterr(all='warn')
 
 def make_fig(smirk, record, title, record_og):
+    x0 = record.espaloma_values
+    x1 = record_og.espaloma_values
 
+    # test = pd.DataFrame({'Filtered':record.espaloma_values,'All':record_og.espaloma_values})
+    df =pd.DataFrame(dict(
+        series=np.concatenate((["All"]*len(x1),["Filtered"]*len(x0))),
+        data  =np.concatenate((x1,x0))
+    ))
+    # test.set_index()
     fig = px.histogram(
-        record.espaloma_values,
+        df,
+        x = 'data',
+        color = 'series',
+        barmode = 'overlay',
         title=f"{record.ident} {smirk}",
-        labels=title,
+        # labels=['All','Filtered'],
+        color_discrete_sequence=['red','blue'],
+        # color=
         width=800,
         height=600,
     )
@@ -36,6 +49,7 @@ def make_fig(smirk, record, title, record_og):
         x=np.average(record.espaloma_values),
         annotation_text=f"{title} Avg.",
         line_dash="dash",
+        line_color='blue'
 
     )
 

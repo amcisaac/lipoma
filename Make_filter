@@ -1,5 +1,5 @@
-data_dir = data_r3
-filter_pattern = "*;r3"
+data_dir = data_r5
+filter_pattern = "*;r5"
 
 query_flags =
 
