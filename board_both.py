@@ -63,7 +63,7 @@ def make_fig(smirk, record, title, record_og):
             x=np.average(record_og.espaloma_values),
             annotation_text=f"{title} Bulk Avg.",
             line_dash="dash",
-            line_color="red"
+            line_color=px.colors.qualitative.Safe[9]
         )
     # except RuntimeWarning:
     #     pass
